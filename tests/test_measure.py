@@ -7,7 +7,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyssp_vv.measure import Alignment, Grid, Trajectory, compare, compare_many, resample
+from pyssp_vv.measure import (
+    Alignment,
+    Grid,
+    Trajectory,
+    compare,
+    compare_many,
+    local_shift_error,
+    resample,
+)
 from pyssp_vv.measure.alignment import Extrapolation, Interpolation
 
 
@@ -149,6 +157,28 @@ class TestCompare:
         item = compare(reference, candidate).signals[0]
         assert item.shift_samples == 0
         assert item.shift_max_abs_error == item.max_abs_error
+
+    def test_local_shift_tolerates_per_sample_lag(self):
+        reference = traj(
+            "a", [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+            h=[0.0, 0.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0],
+        )
+        candidate = traj(
+            "b", [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+            h=[0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 0.0],
+        )
+        item = compare(
+            reference,
+            candidate,
+            alignment=Alignment(shift_samples=3),
+        ).signals[0]
+        assert item.shift_max_abs_error == pytest.approx(10.0)
+        local = local_shift_error(
+            reference["h"],
+            candidate["h"],
+            max_shift=3,
+        )
+        assert np.nanmax(local) == pytest.approx(0.0)
 
 
 class TestNormalisation:

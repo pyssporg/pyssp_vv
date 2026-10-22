@@ -196,6 +196,33 @@ def shift_by(values: np.ndarray, samples: int) -> np.ndarray:
     return result
 
 
+def local_shift_error(
+    reference: np.ndarray,
+    candidate: np.ndarray,
+    *,
+    max_shift: int,
+) -> np.ndarray:
+    """Per-sample minimum error over candidate shifts up to ``max_shift``.
+
+    Unlike :func:`best_shift`, which chooses one lag for the whole series, this
+    tolerates a lag that changes between samples, such as a discontinuity that
+    reaches one component earlier than another.
+    """
+    reference = np.asarray(reference, dtype=np.float64)
+    candidate = np.asarray(candidate, dtype=np.float64)
+    error = np.abs(reference - candidate)
+    for samples in range(1, max_shift + 1):
+        if error.size <= samples:
+            break
+        error[samples:] = np.minimum(
+            error[samples:], np.abs(reference[samples:] - candidate[:-samples])
+        )
+        error[:-samples] = np.minimum(
+            error[:-samples], np.abs(reference[:-samples] - candidate[samples:])
+        )
+    return error
+
+
 def best_shift(
     reference: np.ndarray,
     candidate: np.ndarray,
