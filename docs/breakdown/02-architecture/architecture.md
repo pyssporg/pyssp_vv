@@ -16,6 +16,15 @@ normalisation, figures      verdict, reasons
 `measure` imports numpy. `policy`, `judge`, and `evidence` are standard-library
 only. Nothing here imports another pyssp project.
 
+## Library boundary rule
+
+This package sits at the bottom of the dependency graph. Its border is its
+documented public surface, not its module tree: `Trajectory`, `Comparison`,
+`SignalMetrics`, `Policy`, `Judgment`, `Verdict`, and `EvidenceBundle` may
+cross to a consumer. Internal codecs, helpers, and private fields do not.
+Standard artifacts remain the preferred interchange whenever a file contract
+exists.
+
 ## Layers and import rules
 
 | Layer | May import | Must not import |

@@ -33,6 +33,11 @@ policy. Running an assessment produces an evidence bundle.
 - **Inputs are read-only and identified by digest.**
 - **The capability is at the bottom of the dependency graph.** No other pyssp
   project is imported here; consumers depend on this package, not the reverse.
+- **Public API is the only non-standard border.** Standard artifacts are
+  preferred. When a caller needs an object instead, it receives a documented
+  public type (`Trajectory`, `Comparison`, `SignalMetrics`, `Policy`,
+  `Judgment`, `Verdict`, `EvidenceBundle`); internal modules and private
+  objects stay inside.
 
 ## Non-goals
 
