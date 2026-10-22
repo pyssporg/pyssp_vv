@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyssp-vv"
+version = "0.1.0"
+description = "Verification and validation of simulation models: measurement policies, criteria, and judgment."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "pyssporg contributors" }]
+keywords = ["ssp", "fmi", "simulation", "verification", "validation", "tolerance"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+# The contracts (policy, judge, evidence) are standard-library only.
+dependencies = []
+
+[project.optional-dependencies]
+measure = ["numpy"]
+figures = ["matplotlib"]
+units = ["pint"]
+all = ["numpy", "matplotlib", "pint"]
+dev = ["pytest>=8", "numpy", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyssp_vv"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+xfail_strict = true
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
