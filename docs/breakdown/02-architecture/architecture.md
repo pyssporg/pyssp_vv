@@ -13,8 +13,10 @@ normalisation, figures      verdict, reasons
                  evidence
 ```
 
-`measure` imports numpy. `policy`, `judge`, and `evidence` are standard-library
-only. Nothing here imports another pyssp project.
+`measure`'s module-level imports are numpy only. `matplotlib` is imported inside
+`render_figure`, behind the `figures` extra; importing `measure` never loads it.
+`policy`, `judge`, and `evidence` are standard-library only. Nothing here imports
+another pyssp project.
 
 ## Library boundary rule
 
@@ -30,7 +32,7 @@ exists.
 | Layer | May import | Must not import |
 | --- | --- | --- |
 | `policy`, `judge`, `evidence` | stdlib, `pyssp_vv` | numpy, matplotlib, any `pyssp_*` |
-| `measure` | stdlib, numpy, `pyssp_vv` | matplotlib at module level, any `pyssp_*` |
+| `measure` | stdlib, numpy, `pyssp_vv` | matplotlib at module level (allowed inside `render_figure`), any `pyssp_*` |
 | `judge` | `policy`, `evidence` | `measure` |
 
 The last rule is the important one: judgment consumes a **metric table** (a

@@ -16,7 +16,14 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-from pyssp_vv.measure.alignment import Alignment, best_shift, gap_blocks, resample
+from pyssp_vv.evidence.metrics import MetricRow
+from pyssp_vv.measure.alignment import (
+    Alignment,
+    best_shift,
+    gap_blocks,
+    local_shift_error,
+    resample,
+)
 from pyssp_vv.measure.series import Trajectory
 
 #: Strategies for the normalisation denominator.
@@ -262,3 +269,91 @@ def compare_many(
         raise ValueError("Comparison needs at least two trajectories")
     reference = trajectories[0]
     return tuple(compare(reference, candidate, **kwargs) for candidate in trajectories[1:])
+
+
+def local_shift_errors(
+    reference: Trajectory,
+    candidate: Trajectory,
+    *,
+    alignment: Alignment | None = None,
+    edge_samples: int = 0,
+) -> dict[str, float]:
+    """Edge-masked per-sample minimum error over shifts, one entry per channel.
+
+    The target grid is ``alignment.target(reference.time)`` and the shift window
+    is ``alignment.shift_samples``. With ``edge_samples=N``, the first and last N
+    comparable samples are treated as initialization/shutdown transients and
+    excluded (only when the series is longer than ``2 * N``). Channels not
+    present on both sides are skipped. Mirrors the semantics of
+    :func:`local_shift_error` at the table level; it is not
+    ``SignalMetrics.shift_max_abs_error``, which searches one lag for the whole
+    series.
+    """
+    if edge_samples < 0:
+        raise ValueError("edge_samples must be non-negative")
+    alignment = alignment or Alignment()
+    target = alignment.target(reference.time)
+    shared = tuple(sorted(set(reference.channels) & set(candidate.channels)))
+
+    errors: dict[str, float] = {}
+    for name in shared:
+        reference_values = resample(
+            reference.time,
+            reference[name],
+            target,
+            interpolation=alignment.interpolation,
+            extrapolation=alignment.extrapolation,
+        )
+        candidate_values = resample(
+            candidate.time,
+            candidate[name],
+            target,
+            interpolation=alignment.interpolation,
+            extrapolation=alignment.extrapolation,
+        )
+        error = local_shift_error(
+            reference_values,
+            candidate_values,
+            max_shift=alignment.shift_samples,
+        )
+        if edge_samples and error.size > 2 * edge_samples:
+            error[:edge_samples] = np.nan
+            error[-edge_samples:] = np.nan
+        finite = error[np.isfinite(error)]
+        errors[name] = float(finite.max()) if finite.size else float("nan")
+    return errors
+
+
+def metric_rows(
+    comparison: Comparison,
+    *,
+    max_shift_abs_error: Mapping[str, float] | None = None,
+) -> tuple[MetricRow, ...]:
+    """Map measured signals to the :mod:`pyssp_vv.evidence` row schema.
+
+    ``max_shift_abs_error`` defaults to each signal's ``max_abs_error``. The
+    row's ``run_a`` columns are the reference, ``run_b`` the candidate.
+    """
+    shifts = max_shift_abs_error or {}
+    return tuple(
+        MetricRow(
+            signal=item.signal,
+            max_abs_error=item.max_abs_error,
+            max_shift_abs_error=float(shifts.get(item.signal, item.max_abs_error)),
+            mean_abs_error=item.mean_abs_error,
+            rmse=item.rmse,
+            run_a_label=comparison.reference_label,
+            run_a_min=item.reference_min,
+            run_a_max=item.reference_max,
+            run_b_label=comparison.candidate_label,
+            run_b_min=item.candidate_min,
+            run_b_max=item.candidate_max,
+            coverage=item.coverage,
+            shift_samples=item.shift_samples,
+            normalisation=item.normalisation,
+            denominator=item.denominator,
+            normalised_max_abs_error=item.normalised_max_abs_error,
+            undefined=item.undefined,
+        )
+        for item in comparison.signals
+    )

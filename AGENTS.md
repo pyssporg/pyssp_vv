@@ -40,7 +40,9 @@ judgment stay separate, and a claim is stated before evidence is collected.
 
 - **`policy`, `judge`, and `evidence` are standard-library only.** They are the
   contracts and must install anywhere.
-- **`measure` may use numpy and nothing else** beyond the contracts.
+- **`measure`'s module-level imports are numpy-only** beyond the contracts.
+  `matplotlib` may be imported inside `render_figure`, behind the existing
+  `figures` extra; importing `measure` must never load it.
 - **No other pyssp project may be imported.** `pyssp_vv` is the bottom of the
   dependency graph; `pyssp_simulate` and `pyssp_workflow` depend on it, never
   the reverse.

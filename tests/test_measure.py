@@ -14,6 +14,8 @@ from pyssp_vv.measure import (
     compare,
     compare_many,
     local_shift_error,
+    local_shift_errors,
+    metric_rows,
     resample,
 )
 from pyssp_vv.measure.alignment import Extrapolation, Interpolation
@@ -246,3 +248,106 @@ class TestComparisonTable:
     def test_channel_length_mismatch_rejected(self):
         with pytest.raises(ValueError, match="samples"):
             traj("a", [0.0, 1.0], h=[0.0])
+
+
+class TestLocalShiftErrors:
+    def test_identical_series_are_zero(self):
+        reference = traj("a", [0.0, 1.0, 2.0], h=[0.0, 1.0, 2.0])
+        candidate = traj("b", [0.0, 1.0, 2.0], h=[0.0, 1.0, 2.0])
+        errors = local_shift_errors(reference, candidate, alignment=Alignment(shift_samples=1))
+        assert errors["h"] == pytest.approx(0.0)
+
+    def test_one_sample_lag_is_tolerated(self):
+        reference = traj("a", [0.0, 1.0, 2.0, 3.0], h=[0.0, 0.0, 10.0, 10.0])
+        candidate = traj("b", [0.0, 1.0, 2.0, 3.0], h=[0.0, 10.0, 10.0, 10.0])
+        errors = local_shift_errors(reference, candidate, alignment=Alignment(shift_samples=1))
+        assert errors["h"] == pytest.approx(0.0)
+
+    def test_without_a_shift_window_it_is_the_abs_error(self):
+        reference = traj("a", [0.0, 1.0, 2.0, 3.0], h=[0.0, 0.0, 10.0, 10.0])
+        candidate = traj("b", [0.0, 1.0, 2.0, 3.0], h=[0.0, 10.0, 10.0, 10.0])
+        assert local_shift_errors(reference, candidate)["h"] == pytest.approx(10.0)
+
+    def test_edge_samples_mask_the_tails_only_when_long_enough(self):
+        reference = traj("a", [0.0, 1.0, 2.0, 3.0, 4.0], h=[5.0, 0.0, 0.0, 0.0, 5.0])
+        candidate = traj("b", [0.0, 1.0, 2.0, 3.0, 4.0], h=[0.0, 0.0, 0.0, 0.0, 0.0])
+        assert local_shift_errors(reference, candidate)["h"] == pytest.approx(5.0)
+        assert local_shift_errors(reference, candidate, edge_samples=2)["h"] == pytest.approx(0.0)
+
+        short_reference = traj("a", [0.0, 1.0, 2.0, 3.0], h=[5.0, 0.0, 0.0, 5.0])
+        short_candidate = traj("b", [0.0, 1.0, 2.0, 3.0], h=[0.0, 0.0, 0.0, 0.0])
+        assert local_shift_errors(
+            short_reference, short_candidate, edge_samples=2
+        )["h"] == pytest.approx(5.0)
+
+    def test_keys_are_the_shared_channels(self):
+        reference = traj("a", [0.0, 1.0], h=[0.0, 1.0], v=[0.0, 1.0])
+        candidate = traj("b", [0.0, 1.0], h=[0.0, 1.0], w=[0.0, 1.0])
+        assert set(local_shift_errors(reference, candidate)) == {"h"}
+
+    def test_matches_local_shift_error_on_the_alignment_grid(self):
+        alignment = Alignment(shift_samples=2)
+        reference = traj(
+            "a",
+            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+            h=[0.0, 0.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0],
+        )
+        candidate = traj(
+            "b",
+            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+            h=[0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 0.0],
+        )
+        target = alignment.target(reference.time)
+        local = local_shift_error(
+            resample(reference.time, reference["h"], target),
+            resample(candidate.time, candidate["h"], target),
+            max_shift=alignment.shift_samples,
+        )
+        expected = float(np.nanmax(local))
+        assert local_shift_errors(
+            reference, candidate, alignment=alignment
+        )["h"] == pytest.approx(expected)
+
+    def test_negative_edge_samples_raise(self):
+        reference = traj("a", [0.0], h=[0.0])
+        with pytest.raises(ValueError, match="non-negative"):
+            local_shift_errors(reference, reference, edge_samples=-1)
+
+
+class TestMetricRows:
+    def test_maps_a_comparison_to_the_row_schema(self):
+        report = compare(
+            traj("ref", [0.0, 1.0], h=[1.0, 1.0]),
+            traj("cand", [0.0, 1.0], h=[1.0, 1.2]),
+        )
+        row = metric_rows(report)[0]
+        assert row.signal == "h"
+        assert row.run_a_label == "ref"
+        assert row.run_b_label == "cand"
+        assert row.run_a_min == pytest.approx(1.0)
+        assert row.run_a_max == pytest.approx(1.0)
+        assert row.run_b_max == pytest.approx(1.2)
+        assert row.max_abs_error == pytest.approx(0.2)
+        assert row.max_shift_abs_error == pytest.approx(0.2)
+        assert row.coverage == pytest.approx(1.0)
+        assert row.shift_samples == 0
+        assert row.normalisation == "reference_peak"
+        assert row.denominator == pytest.approx(1.0)
+
+    def test_max_shift_abs_error_overrides_per_signal(self):
+        report = compare(
+            traj("ref", [0.0, 1.0], h=[1.0, 1.0], v=[1.0, 1.0]),
+            traj("cand", [0.0, 1.0], h=[1.2, 1.2], v=[1.5, 1.5]),
+        )
+        rows = {row.signal: row for row in metric_rows(report, max_shift_abs_error={"h": 0.01})}
+        assert rows["h"].max_shift_abs_error == pytest.approx(0.01)
+        assert rows["v"].max_shift_abs_error == pytest.approx(rows["v"].max_abs_error)
+        assert rows["v"].max_abs_error == pytest.approx(0.5)
+
+    def test_undefined_reasons_are_carried(self):
+        report = compare(
+            traj("a", [0.0, 1.0], h=[np.nan, np.nan]),
+            traj("b", [0.0, 1.0], h=[0.0, 1.0]),
+        )
+        row = metric_rows(report)[0]
+        assert "no-comparable-samples" in row.undefined

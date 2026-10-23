@@ -11,18 +11,31 @@ from pyssp_vv.measure.alignment import (
     local_shift_error,
     resample,
 )
-from pyssp_vv.measure.metrics import Comparison, SignalMetrics, compare, compare_many
+from pyssp_vv.measure.figures import FigureSpec, build_figure_spec, render_figure
+from pyssp_vv.measure.metrics import (
+    Comparison,
+    SignalMetrics,
+    compare,
+    compare_many,
+    local_shift_errors,
+    metric_rows,
+)
 from pyssp_vv.measure.series import Trajectory
 
 __all__ = [
     "Alignment",
     "Comparison",
+    "FigureSpec",
     "Grid",
     "Interpolation",
     "SignalMetrics",
     "Trajectory",
+    "build_figure_spec",
     "compare",
     "compare_many",
     "local_shift_error",
+    "local_shift_errors",
+    "metric_rows",
+    "render_figure",
     "resample",
 ]
