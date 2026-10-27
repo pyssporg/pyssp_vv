@@ -1,3 +1,12 @@
+---
+id: INFO-001
+type: info
+title: Intent
+summary: Why pyssp_vv exists, the claims it makes, and what it refuses to become.
+date: 2026-10-22
+status: current
+---
+
 # Intent
 
 ## Purpose

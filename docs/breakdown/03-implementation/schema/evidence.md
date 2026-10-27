@@ -1,4 +1,15 @@
-# Evidence Schema (`0.1.0`)
+---
+id: INFO-005
+type: info
+title: Evidence Schema
+summary: "Field rules for a durable evidence bundle: digest-addressed inputs, environment, one verdict per oracle."
+date: 2026-10-22
+status: current
+---
+
+# Evidence Schema
+
+Schema version `0.1.0`, written by the producer into `schema_version`.
 
 An evidence bundle is the durable result of running one assessment. It names its
 inputs by digest, records the environment, and lists one verdict per oracle. It

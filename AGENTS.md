@@ -65,9 +65,13 @@ judgment stay separate, and a claim is stated before evidence is collected.
 
 ## Conventions
 
-- `docs/breakdown/` holds intent, architecture, schemas, and decisions.
-- Decision records use `ADR-<NNN>.md` architecture, `DD-<NNN>-<slug>.md`
-  implementation, and `ED-<NNN>-<slug>.md` evolution.
+- `docs/breakdown/` holds intent, product, architecture, implementation,
+  verification, and operation as current state, one layer index per folder.
+- Dated choices are decision records in `docs/archive/archive.zip`, reached via
+  `pb archive list` / `pb archive read <ID>`, added with `pb archive add`.
+  Current state is a leaf; history is the archive.
+- Regenerate the registers with `pb registers --root docs/breakdown`; never
+  hand-edit `docs/archive/*.md` or a `## Contents` list.
 
 ## Environment
 

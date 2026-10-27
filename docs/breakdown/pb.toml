@@ -1,0 +1,10 @@
+# pb.toml — overrides for the product-breakdown defaults.
+
+[layout]
+archive = "../archive/archive.zip"
+repo_root = "../.."
+
+[registers]
+index = "README.md"
+log = "design-choice-log.md"
+traceability = "traceability-map.md"

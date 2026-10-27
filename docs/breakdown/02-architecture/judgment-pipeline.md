@@ -1,0 +1,72 @@
+---
+id: INFO-003
+type: info
+title: Measurement And Judgment Pipeline
+summary: Measurement produces metric rows with their alignment; judgment turns metric views into a verdict with reasons.
+date: 2026-10-23
+status: current
+---
+
+# Measurement And Judgment Pipeline
+
+## Measurement
+
+- `Trajectory` is one time base plus named channels. Per-channel time bases are
+  not modelled; callers resample first. That keeps every alignment decision
+  visible.
+- Alignment chooses the grid, the interpolation (`linear` or `step`), the
+  extrapolation (`clamp` or `nan`), the shift search window, and the gap rule.
+- The gap rule is not cosmetic. Interpolating across missing samples makes the
+  error look better and the coverage look complete. A target that lands on an
+  invalid sample, or strictly inside a gap wider than `max_gap_samples`, is not
+  comparable and does not count towards coverage.
+- Every metric carries `coverage`, `denominator`, `normalisation`, and the
+  alignment that produced it.
+
+## Judgment
+
+Four steps, in order. A later step does not run if an earlier one fails.
+
+1. **Preconditions** — the comparison has signals, samples, and finite values.
+2. **Sufficiency** — could this test have failed? Coverage below the minimum, a
+   degenerate expectation, or a shift at the search boundary make the comparison
+   unfit to judge.
+3. **Criterion** — the declared margin, evaluated on the selected metric.
+4. **Disposition** — a recorded waiver, applied by the caller, converts a failure
+   to `waived`. It never edits metrics.
+
+`judge()` returns `pass`, `fail`, or `invalid`. `blocked` (no metrics could be
+produced) and `waived` (disposition) are applied by the caller.
+
+## Verdicts
+
+| Verdict | Meaning |
+| --- | --- |
+| `pass` | The criterion holds |
+| `fail` | The criterion is exceeded |
+| `invalid` | The comparison was not fit to judge |
+| `blocked` | Metrics could not be produced |
+| `waived` | A recorded disposition overrides a failure |
+
+`invalid` is load-bearing: without it, an uncontrolled comparison looks like a
+model defect and the first response is to loosen a tolerance.
+
+## Distribution boundary
+
+Measurement and judgment ship in one distribution. `pyssp_simulate` may import
+`pyssp_vv.measure` for its own convenience (a fast comparison inside a
+permutation run). It must not re-export that surface, and it must not import
+`pyssp_vv.judge`.
+
+Splitting the modules into two packages would buy independent release cadence at
+the cost of a cross-package version matrix and policy types that reference each
+other. The module boundary is enforced by an import test, so the separation is
+real without the packaging overhead. `measure` depends on no pyssp project and
+can be cut out mechanically if a non-SSP consumer appears.
+
+## Reporting
+
+Figures are derived artifacts. The specification is data: overlay, residual
+panel, criterion band, gap shading, shift indicator. Rendering sits behind the
+`figures` extra. A figure is never hashed into evidence and never an acceptance
+criterion.

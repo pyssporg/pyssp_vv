@@ -95,8 +95,5 @@ Figure specification is documented but not built.
 
 ## Documentation
 
-- [Intent](docs/breakdown/00-intent/intent.md)
-- [Architecture and import rules](docs/breakdown/02-architecture/architecture.md)
-- [Assessment schema](docs/breakdown/03-implementation/schema/assessment.md)
-- [Evidence schema](docs/breakdown/03-implementation/schema/evidence.md)
-- [Judgment under a policy](docs/breakdown/06-evolution/ED-001-judgment-under-policy.md)
+- [Product breakdown](docs/breakdown/README.md) — intent, capabilities,
+  architecture, schemas, verification, operation, and the decision archive

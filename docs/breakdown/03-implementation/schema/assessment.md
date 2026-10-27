@@ -1,4 +1,17 @@
-# Assessment Schema (`0.1.0`)
+---
+id: INFO-004
+type: info
+title: Assessment Schema
+summary: "Field rules for an assessment: one factor, its held constants, and its oracles with versioned policies."
+date: 2026-10-22
+status: current
+pb_exempt: true
+---
+
+# Assessment Schema
+
+Schema version `0.1.0`, written as `schema_version` and defaulted from the
+package schema version.
 
 An assessment declares one controlled comparison: what varies, what is held
 constant, and which policies judge it.

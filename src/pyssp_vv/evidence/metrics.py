@@ -44,9 +44,9 @@ METRIC_COLUMNS: tuple[str, ...] = (
 class MetricRow:
     """One signal's measured difference, as written to metrics.csv.
 
-    Column names are the reviewed schema (EVAL-005,
-    ssp_references/product-breakdown/04-verification/comparison_metrics_gate_review.md)
-    and are kept verbatim; ``run_a`` is the reference, ``run_b`` the candidate.
+    Column names are the reviewed metric-row schema, versioned by
+    ``pyssp_vv.version.SCHEMA_VERSION``; ``run_a`` is the reference, ``run_b``
+    the candidate.
     """
 
     signal: str
