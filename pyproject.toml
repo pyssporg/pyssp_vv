@@ -39,6 +39,16 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 xfail_strict = true
 addopts = "-q"
+markers = [
+  "level_static: import-graph and configuration rules",
+  "level_unit: one module's logic with fabricated inputs",
+  "level_component: a module's own artifacts, files, and round-trips",
+  "level_contract: the seam between produced and consumed types",
+  "level_integration: two or more modules composed",
+  "level_system: an end-to-end run through the public entry points",
+  "level_acceptance: a requirement stated in the intent or breakdown",
+  "slow: too slow for the default suite",
+]
 
 [tool.ruff]
 line-length = 100

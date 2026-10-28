@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -72,6 +74,85 @@ def test_directory_digest_tracks_content(tmp_path):
     assert digest_path(tree) != before
 
 
+def test_directory_digest_known_answer(tmp_path):
+    # Independent recipe, written out here rather than delegated to digest_path:
+    # the sorted relative POSIX paths and the file bytes are concatenated, each
+    # followed by a NUL separator, and sha256 runs over the whole stream:
+    #   b"a.txt"     + \0 + b"alpha"      + \0
+    #   b"sub/b.bin" + \0 + b"\x00\x01\x02" + \0
+    # The pinned hex was computed once from that recipe by hand (not by calling
+    # digest_path), so a changed separator or a dropped relative path changes
+    # the expectation.
+    tree = tmp_path / "tree"
+    (tree / "sub").mkdir(parents=True)
+    (tree / "a.txt").write_bytes(b"alpha")
+    (tree / "sub" / "b.bin").write_bytes(b"\x00\x01\x02")
+
+    digest = hashlib.sha256()
+    for relative, data in (("a.txt", b"alpha"), ("sub/b.bin", b"\x00\x01\x02")):
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(data)
+        digest.update(b"\0")
+
+    assert digest.hexdigest() == "8f6184175fb27a922c63eea66f6350080070cbd18141001e2bd8645b33938003"
+    assert digest_path(tree) == f"sha256:{digest.hexdigest()}"
+
+
+def test_renaming_a_file_inside_the_tree_changes_the_digest(tmp_path):
+    # Same bytes, one different name: only a digest that mixes the relative
+    # path into the stream can tell the two trees apart.
+    tree = tmp_path / "tree"
+    (tree / "sub").mkdir(parents=True)
+    (tree / "sub" / "one.bin").write_bytes(b"same bytes")
+    before = digest_path(tree)
+
+    (tree / "sub" / "one.bin").rename(tree / "sub" / "two.bin")
+
+    assert digest_path(tree) != before
+
+
+def test_default_created_is_timezone_aware_utc():
+    bundle = EvidenceBundle(
+        assessment_id="BouncingBall/baseline",
+        inputs=(),
+        verdicts=(),
+        environment={},
+    )
+
+    created = datetime.fromisoformat(bundle.created)
+    assert created.tzinfo is not None
+    assert created.utcoffset() == timedelta(0)
+    assert bundle.created.endswith("+00:00")
+
+
+def test_two_bundles_differ_only_in_created(tmp_path):
+    def build(created: str) -> EvidenceBundle:
+        return EvidenceBundle(
+            assessment_id="BouncingBall/baseline",
+            inputs=(),
+            verdicts=(
+                VerdictRecord(
+                    oracle_id="agreement",
+                    kind="cross_engine",
+                    verdict=Verdict.PASS,
+                    metrics={"max_abs": 1.0},
+                ),
+            ),
+            environment={"python": "3.10.12"},
+            created=created,
+        )
+
+    first = build("2026-10-22T00:00:00+00:00")
+    second = build("2026-10-22T00:00:01+00:00")
+    first_data = first.to_dict()
+    second_data = second.to_dict()
+
+    assert first_data.pop("created") != second_data.pop("created")
+    assert first_data == second_data
+    assert EvidenceBundle.read(first.write(tmp_path / "first.json")) == first
+
+
 def test_non_json_metrics_fail_before_writing(tmp_path):
     bundle = EvidenceBundle(
         assessment_id="x/y",
@@ -118,6 +199,29 @@ def _row(**overrides) -> MetricRow:
 
 
 class TestMetricRow:
+    def test_columns_are_pinned_for_review(self):
+        # The durable schema: changing a name or an order is a reviewable diff.
+        assert METRIC_COLUMNS == (
+            "signal",
+            "max_abs_error",
+            "max_shift_abs_error",
+            "mean_abs_error",
+            "rmse",
+            "run_a_label",
+            "run_a_min",
+            "run_a_max",
+            "run_b_label",
+            "run_b_min",
+            "run_b_max",
+            "coverage",
+            "shift_samples",
+            "normalisation",
+            "denominator",
+            "normalised_max_abs_error",
+            "undefined",
+        )
+        assert tuple(_row().to_dict()) == METRIC_COLUMNS
+
     def test_dict_follows_declared_columns_and_roundtrips(self):
         row = _row(undefined=("no-comparable-samples", "zero-denominator"))
         data = row.to_dict()

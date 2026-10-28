@@ -118,6 +118,53 @@ class MetricRow:
 
 
 @dataclass(frozen=True)
+class MetricRowView:
+    """A :class:`MetricRow` in the vocabulary judgment reads.
+
+    The durable schema names the reference columns ``run_a_*``; judgment calls
+    them ``reference_*`` (:class:`pyssp_vv.judge.criteria.MetricView`).
+    :func:`as_metric_view` is the one place that translation happens, so the CSV
+    schema and the judgment protocol can each keep their own names.
+
+    This is structurally compatible with ``MetricView`` without importing it:
+    an evidence reader stays standard-library only.
+    """
+
+    signal: str
+    coverage: float
+    max_abs_error: float
+    mean_abs_error: float
+    rmse: float
+    normalised_max_abs_error: float
+    reference_min: float
+    reference_max: float
+    shift_samples: int
+    undefined: tuple[str, ...] = ()
+
+
+def as_metric_view(row: MetricRow) -> MetricRowView:
+    """Translate a durable row into the attributes ``judge`` consumes.
+
+    ``run_a`` is the reference and ``run_b`` the candidate, the schema's own
+    invariant, so ``run_a_min``/``run_a_max`` become
+    ``reference_min``/``reference_max``. Nothing else is renamed, dropped, or
+    invented.
+    """
+    return MetricRowView(
+        signal=row.signal,
+        coverage=row.coverage,
+        max_abs_error=row.max_abs_error,
+        mean_abs_error=row.mean_abs_error,
+        rmse=row.rmse,
+        normalised_max_abs_error=row.normalised_max_abs_error,
+        reference_min=row.run_a_min,
+        reference_max=row.run_a_max,
+        shift_samples=row.shift_samples,
+        undefined=row.undefined,
+    )
+
+
+@dataclass(frozen=True)
 class ComparisonSummary:
     """One comparison as a manifest records it, above the per-signal rows."""
 

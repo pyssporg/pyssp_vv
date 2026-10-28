@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +19,7 @@ from pyssp_vv.measure import (
     metric_rows,
     resample,
 )
-from pyssp_vv.measure.alignment import Extrapolation, Interpolation
+from pyssp_vv.measure.alignment import Extrapolation, Interpolation, best_shift, gap_blocks
 
 
 def traj(label: str, time, **channels) -> Trajectory:
@@ -72,6 +73,90 @@ class TestResample:
             extrapolation=Extrapolation.NAN,
         )
         assert np.isnan(values[0]) and values[1] == 0.0 and np.isnan(values[2])
+
+
+class TestGapRule:
+    def test_gap_blocks_marks_exact_invalid_hits_and_gaps_wider_than_allowed(self):
+        # Samples at 0 and 3 are valid; 1 and 2 are not (gap = 2 samples).
+        times = np.array([0.0, 1.0, 2.0, 3.0])
+        values = np.array([1.0, np.nan, np.nan, 2.0])
+        target = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0])
+
+        # max_gap_samples=1: 0.5, 1.5 and 2.5 lie strictly inside a 2-sample
+        # gap, and 1.0/2.0 land on the invalid samples themselves.
+        np.testing.assert_array_equal(
+            gap_blocks(times, values, target, 1),
+            [False, True, True, True, True, True, False],
+        )
+        # max_gap_samples=2: the gap is no wider than allowed, so only the
+        # coincident invalid samples are blocked.
+        np.testing.assert_array_equal(
+            gap_blocks(times, values, target, 2),
+            [False, False, True, False, True, False, False],
+        )
+        # None is the permissive policy: gaps are interpolated, nothing blocked.
+        np.testing.assert_array_equal(
+            gap_blocks(times, values, target, None),
+            [False] * target.size,
+        )
+
+    def test_max_gap_samples_controls_coverage_and_not_the_error(self):
+        # Reference h has two missing samples at t=1 and t=2, between the valid
+        # endpoints t=0 and t=3. Linear resampling reconstructs h(t)=t exactly,
+        # so the candidate matches and every setting measures max_abs_error 0.
+        # The grid steps land half-way between the reference samples, so the
+        # mid-gap targets are not exact hits: only max_gap_samples decides them.
+        reference = traj("a", [0.0, 1.0, 2.0, 3.0], h=[0.0, np.nan, np.nan, 3.0])
+        candidate = traj("b", [0.0, 1.0, 2.0, 3.0], h=[0.0, 1.0, 2.0, 3.0])
+        window = Grid(start_time=0.0, stop_time=3.0, step_size=0.5)
+
+        tight = compare(
+            reference,
+            candidate,
+            alignment=Alignment(grid=window, max_gap_samples=1),
+        ).signals[0]
+        loose = compare(
+            reference,
+            candidate,
+            alignment=Alignment(grid=window, max_gap_samples=2),
+        ).signals[0]
+        permissive = compare(
+            reference,
+            candidate,
+            alignment=Alignment(grid=window, max_gap_samples=None),
+        ).signals[0]
+
+        # Target samples are 0, .5, 1, 1.5, 2, 2.5, 3.
+        # gap=1: the mid-gap samples are too far from a valid sample -> 2/7.
+        # gap=2: only the coincident invalid samples 1 and 2 are blocked -> 5/7.
+        # None: every sample is reconstructed -> 7/7.
+        assert tight.coverage == pytest.approx(2 / 7)
+        assert loose.coverage == pytest.approx(5 / 7)
+        assert permissive.coverage == pytest.approx(1.0)
+        for item in (tight, loose, permissive):
+            assert item.max_abs_error == pytest.approx(0.0)
+
+
+class TestBestShift:
+    def test_tie_prefers_the_smallest_absolute_shift(self):
+        # reference [1, 2, 1], candidate [2, 1, 2]:
+        #   shift  0 -> errors [1, 1, 1]      max 1
+        #   shift +1 -> [nan, 0, 0]           max 0
+        #   shift -1 -> [0, 0, nan]           max 0
+        # Both one-sample shifts score 0, so the tie-break must keep -1: the
+        # smallest |shift|, first seen in the -max_shift..+max_shift loop.
+        assert best_shift(
+            np.array([1.0, 2.0, 1.0]),
+            np.array([2.0, 1.0, 2.0]),
+            max_shift=2,
+        ) == (-1, 0.0)
+
+    def test_tie_that_includes_zero_keeps_the_unshifted_series(self):
+        # Constant series: every shift scores 0, including 0 itself.
+        assert best_shift(np.array([5.0, 5.0]), np.array([5.0, 5.0]), max_shift=2) == (
+            0,
+            0.0,
+        )
 
 
 class TestCompare:
@@ -160,6 +245,22 @@ class TestCompare:
         assert item.shift_samples == 0
         assert item.shift_max_abs_error == item.max_abs_error
 
+    def test_rmse_is_not_the_mean_absolute_error(self):
+        # Per-sample error magnitudes are 1, 2, 3, 4 (all positive, no sign
+        # cancellation, so this is a pure average-vs-root-mean-square test).
+        # mean = (1 + 2 + 3 + 4) / 4 = 10 / 4 = 2.5
+        # rmse = sqrt((1^2 + 2^2 + 3^2 + 4^2) / 4) = sqrt(30 / 4) = sqrt(7.5)
+        # sqrt(7.5) = 2.7386..., so rmse != mean and a bug that returns
+        # errors.mean() for rmse gives 2.5 here.
+        item = compare(
+            traj("a", [0.0, 1.0, 2.0, 3.0], h=[0.0, 0.0, 0.0, 0.0]),
+            traj("b", [0.0, 1.0, 2.0, 3.0], h=[1.0, 2.0, 3.0, 4.0]),
+        ).signals[0]
+        assert item.max_abs_error == pytest.approx(4.0)
+        assert item.mean_abs_error == pytest.approx(2.5)
+        assert item.rmse == pytest.approx(math.sqrt(7.5))
+        assert item.rmse != pytest.approx(item.mean_abs_error)
+
     def test_local_shift_tolerates_per_sample_lag(self):
         reference = traj(
             "a", [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -191,6 +292,22 @@ class TestNormalisation:
         ).signals[0]
         assert item.denominator == pytest.approx(100.0)
         assert item.normalised_max_abs_error == pytest.approx(0.005)
+
+    def test_reference_peak_uses_the_larger_absolute_excursion(self):
+        # A peak that only looks at the positive side is the classic bug.
+        # reference = [1000, -5000] -> peak = max(|1000|, |-5000|) = 5000
+        # candidate = [1000, -4000] -> errors 0 and 1000, max_abs = 1000
+        # normalised = 1000 / 5000 = 0.2, whereas abs(reference.max()) = 1000
+        # would give 1.0.
+        item = compare(
+            traj("a", [0.0, 1.0], h=[1000.0, -5000.0]),
+            traj("b", [0.0, 1.0], h=[1000.0, -4000.0]),
+        ).signals[0]
+        assert item.reference_min == pytest.approx(-5000.0)
+        assert item.reference_max == pytest.approx(1000.0)
+        assert item.max_abs_error == pytest.approx(1000.0)
+        assert item.denominator == pytest.approx(5000.0)
+        assert item.normalised_max_abs_error == pytest.approx(0.2)
 
     def test_unit_denominator(self):
         item = compare(
@@ -312,6 +429,26 @@ class TestLocalShiftErrors:
         reference = traj("a", [0.0], h=[0.0])
         with pytest.raises(ValueError, match="non-negative"):
             local_shift_errors(reference, reference, edge_samples=-1)
+
+
+class TestTrajectoryUnits:
+    def test_units_for_a_known_channel_are_kept(self):
+        item = Trajectory(
+            time=np.array([0.0, 1.0]),
+            channels={"h": np.array([1.0, 2.0])},
+            units={"h": "m"},
+        )
+        assert dict(item.units) == {"h": "m"}
+
+    def test_units_for_an_unknown_channel_are_rejected(self):
+        # A unit attached to a channel that does not exist is a silent typo;
+        # the constructor refuses it instead of dropping it.
+        with pytest.raises(ValueError, match="units declared for unknown channels"):
+            Trajectory(
+                time=np.array([0.0, 1.0]),
+                channels={"h": np.array([1.0, 2.0])},
+                units={"v": "m/s"},
+            )
 
 
 class TestMetricRows:
