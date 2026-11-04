@@ -14,7 +14,7 @@ from typing import Iterable
 
 DEFAULT_DISTRIBUTIONS = (
     "pyssp-vv",
-    "pyssp-standard",
+    "experimental-pyssp-standard",
     "pyssp-simulate",
     "pyssp-workflow",
     "fmpy",
