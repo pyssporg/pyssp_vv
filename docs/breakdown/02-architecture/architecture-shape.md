@@ -23,7 +23,7 @@ normalisation, figures      verdict, reasons
 ```
 
 `measure`'s module-level imports are numpy only. `matplotlib` is imported inside
-`render_figure`, behind the `figures` extra; importing `measure` never loads it.
+`render_figure`; importing `measure` never loads it.
 `policy`, `judge`, and `evidence` are standard-library only. Nothing here imports
 another pyssp project.
 

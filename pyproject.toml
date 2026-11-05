@@ -21,14 +21,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
-# The contracts (policy, judge, evidence) are standard-library only.
-dependencies = []
+# The contracts (policy, judge, evidence) are standard-library only; the
+# numpy-backed measurement layer is a base dependency of the distribution.
+dependencies = ["numpy"]
 
 [project.optional-dependencies]
-measure = ["numpy"]
-figures = ["matplotlib"]
-units = ["pint"]
-all = ["numpy", "matplotlib", "pint"]
 dev = ["pytest>=8", "numpy", "ruff>=0.6"]
 
 [tool.hatch.build.targets.wheel]

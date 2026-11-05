@@ -8,8 +8,8 @@ Two capabilities, one distribution:
   criterion, sufficiency, dispositions, verdicts.
 
 The contracts (:mod:`pyssp_vv.policy`, :mod:`pyssp_vv.judge`,
-:mod:`pyssp_vv.evidence`) are standard-library only. Measurement needs numpy and
-ships behind the ``measure`` extra.
+:mod:`pyssp_vv.evidence`) are standard-library only. Measurement needs numpy,
+which is a base dependency of the distribution.
 """
 
 __version__ = "0.1.0"

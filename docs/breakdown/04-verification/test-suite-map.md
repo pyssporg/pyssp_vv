@@ -22,8 +22,8 @@ Run with `python -m pytest`.
 | `test_judge.py` | Judgment from fabricated metric tables: pass, fail with reason, rtol scaling, invalid on low coverage, degenerate reference, boundary shift, non-finite metric, no comparable samples, pessimistic aggregation, invalid dominating failure. No simulation, no numeric library. |
 | `test_policy.py` | Policies and assessments round-trip as JSON and reject nonsense: unknown keys, a factor held constant, a negative criterion, out-of-range sufficiency, an assessment without an oracle. |
 | `test_evidence.py` | Bundle round-trip, relative paths, directory digests tracking content, non-JSON metrics refused before writing, metric CSV, summary rows. |
-| `test_figures.py` | Figure specification as data, and the matplotlib adapter behind the extra. |
-| `test_layering.py` | The import graph: contract layers stdlib-only, measure numpy-only, declared extras, no pyssp project, judge independent of measure. |
+| `test_figures.py` | Figure specification as data, and the matplotlib adapter. |
+| `test_layering.py` | The import graph: contract layers stdlib-only, measure numpy-only, allowed function-local imports, no pyssp project, judge independent of measure. |
 
 ## Shape of the suite
 

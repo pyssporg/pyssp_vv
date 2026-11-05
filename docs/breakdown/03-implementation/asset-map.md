@@ -41,8 +41,8 @@ independently of it.
 
 ## Dependencies
 
-No runtime dependencies. Extras add `numpy` (`measure`), `matplotlib`
-(`figures`), `pint` (`units`).
+`numpy` is the base dependency for `measure`. `policy`, `judge`, and `evidence`
+use the standard library only.
 
 ## Owns
 - Which concrete module and public symbol realizes which architecture concern.

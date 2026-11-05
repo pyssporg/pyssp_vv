@@ -166,7 +166,7 @@ def test_measure_uses_only_numpy_beyond_the_contracts():
     )
 
 
-def test_measure_function_local_imports_stay_within_declared_extras():
+def test_measure_function_local_imports_stay_within_allowed_dependencies():
     allowed = (
         set(sys.stdlib_module_names)
         | {"__future__", "_pytest"}

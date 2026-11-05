@@ -4,8 +4,8 @@ A figure is described as data — what is overlaid, on which signal, with an
 optional tolerance band — so a consumer can build or inspect it without
 matplotlib. Rendering is a separate adapter: :func:`render_figure` imports
 matplotlib inside the function and forces the Agg backend, so importing this
-module stays matplotlib-free. Matplotlib is the ``figures`` extra, never a
-module-level dependency of ``measure``.
+module stays matplotlib-free. Matplotlib is installed separately
+(``pip install matplotlib``), never a module-level dependency of ``measure``.
 
 Figures are derived artifacts: regenerable from the comparison and the policy,
 never hashed into evidence, and never an acceptance criterion. A comparison

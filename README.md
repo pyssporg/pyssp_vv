@@ -57,11 +57,11 @@ needs and what a claim is made of.
 ## Install
 
 ```bash
-pip install -e ".[dev]"          # contracts, standard library only
-pip install -e ".[dev,measure]"  # measurement (numpy)
+pip install -e ".[dev]"          # measurement layer, contracts, and test tools
 ```
 
-Extras: `measure`, `figures`, `units`, `all`.
+`numpy` is the base dependency of the measurement layer; `policy`, `judge`, and
+`evidence` remain standard-library only.
 
 ## Use
 

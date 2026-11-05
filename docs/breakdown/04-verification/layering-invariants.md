@@ -18,7 +18,7 @@ every module under `src/pyssp_vv` with `ast`; fix the code, not the test.
 | --- | --- |
 | `policy`, `judge`, `evidence` import stdlib only | `test_contract_layers_are_standard_library_only` |
 | `measure`'s module-level imports are stdlib or numpy | `test_measure_uses_only_numpy_beyond_the_contracts` |
-| `measure` function-local imports stay inside declared extras (`matplotlib`) | `test_measure_function_local_imports_stay_within_declared_extras` |
+| `measure` function-local imports stay within the allowed dependencies (`matplotlib`) | `test_measure_function_local_imports_stay_within_allowed_dependencies` |
 | No module imports another pyssp project | `test_no_pyssp_project_is_imported` |
 | `judge` never imports `pyssp_vv.measure` | `test_judge_does_not_import_measure` |
 
@@ -37,9 +37,9 @@ Two tests run fresh interpreters with `src` importable:
 `policy`, `judge`, and `evidence` are the contracts. They must install anywhere,
 so a third-party import is a packaging defect, not a style issue.
 
-`measure` may use numpy at module level. `matplotlib` sits behind the `figures`
-extra and is imported inside `render_figure`, so a caller that never draws a
-figure never pays for it.
+`measure` may use numpy at module level. `matplotlib` is imported inside
+`render_figure` and stays optional, so a caller that never draws a figure never
+pays for it.
 
 `judge` consumes a metric table (a structural protocol), not a trajectory. That
 is what makes the judgment layer testable with fabricated numbers, without a

@@ -67,6 +67,6 @@ can be cut out mechanically if a non-SSP consumer appears.
 ## Reporting
 
 Figures are derived artifacts. The specification is data: overlay, residual
-panel, criterion band, gap shading, shift indicator. Rendering sits behind the
-`figures` extra. A figure is never hashed into evidence and never an acceptance
-criterion.
+panel, criterion band, gap shading, shift indicator. Rendering lives in an
+optional `matplotlib` adapter inside `render_figure`. A figure is never hashed
+into evidence and never an acceptance criterion.
