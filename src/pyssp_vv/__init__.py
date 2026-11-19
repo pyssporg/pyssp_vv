@@ -12,4 +12,4 @@ The contracts (:mod:`pyssp_vv.policy`, :mod:`pyssp_vv.judge`,
 which is a base dependency of the distribution.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
