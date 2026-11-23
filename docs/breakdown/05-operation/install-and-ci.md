@@ -15,7 +15,7 @@ status: current
 pip install -e ".[dev]"
 ```
 
-Python >= 3.10.
+Python >= 3.11.
 
 ## Dependencies
 
@@ -27,21 +27,23 @@ Python >= 3.10.
 ## Local commands
 
 ```bash
-python -m pytest          # full suite, pythonpath from pyproject
-ruff check src tests      # line length 100, target py310
+python -m pytest -m "not slow"   # CI selection; drop the marker for the full suite
+ruff check src tests            # line length 100, target py311
 ```
 
 ## CI
 
-`.github/workflows/ci.yml` runs on push to `main` and on every pull request.
+`.github/workflows/tests.yml` runs on push to `main` and on every pull request.
 
-- One job, matrix over Python `3.10`, `3.11`, `3.12`; `fail-fast: false`.
-- Steps: checkout, setup-python, `pip install -e ".[dev]"`, `python -m pytest`.
-- A final step imports `pyssp_vv.judge`, `pyssp_vv.policy`, and
-  `pyssp_vv.evidence`, then asserts neither `numpy` nor `matplotlib` is in
-  `sys.modules`.
+- One job, matrix over Python `3.11`, `3.12`; `fail-fast: false`.
+- Steps: checkout, setup-python, `pip install -e ".[dev]"`, `ruff check src
+  tests`, `python -m pytest -m "not slow"`, the contracts-import step, and a
+  clean-checkout step.
+- The contracts step imports `pyssp_vv.judge`, `pyssp_vv.policy`, and
+  `pyssp_vv.evidence`, then asserts none of `numpy`, `matplotlib`, or `pint` is
+  in `sys.modules`.
 
-CI does not run ruff.
+CI runs the same ruff command as the local lint gate.
 
 ## Owns
 - Install paths, dependencies, local commands, and what CI executes.

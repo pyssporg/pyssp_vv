@@ -75,8 +75,8 @@ judgment stay separate, and a claim is stated before evidence is collected.
 
 ## Environment
 
-- Python >= 3.10.
+- Python >= 3.11.
 - Install: `pip install -e ".[dev]"`; `numpy` is the base dependency of the
   measurement layer.
 - Tests: `python -m pytest` (pyproject sets `pythonpath`); lint with
-  `ruff check src tests` (line length 100, py310).
+  `ruff check src tests` (line length 100, py311).

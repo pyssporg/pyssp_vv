@@ -88,10 +88,21 @@ judgment.reasons        # (Reason('criterion-exceeded', '0.1 > 0.05 (max_abs_err
 
 ## Status
 
-`0.1.0`, alpha. Implemented: trajectories, alignment (linear and step
+`0.2.0`, alpha. Implemented: trajectories, alignment (linear and step
 interpolation, clamp/NaN extrapolation, shift search), metric families,
-coverage, normalisation, policy, judgment with reason codes, evidence bundles.
-Figure specification is documented but not built.
+coverage, normalisation, policy, judgment with reason codes, evidence bundles,
+and figure rendering (`build_figure_spec`, `render_figure`; matplotlib is
+imported only inside `render_figure`).
+
+## Development
+
+```bash
+python -m pytest -m "not slow"   # the CI selection; drop the marker for the full suite
+ruff check src tests             # line length 100, target py311
+```
+
+`pyproject.toml` sets `pythonpath = ["src"]`, so the suite runs against the
+checkout. `tests/test_layering.py` enforces the module boundaries.
 
 ## Documentation
 
