@@ -29,7 +29,7 @@ MEASURE_FUNCTION_LOCAL_ALLOWED = {"matplotlib"}
 FORBIDDEN_PREFIXES = (
     "pyssp_standard",
     "pyssp_simulate",
-    "pyssp_sysml2",
+    "pyssp_sysml",
     "pyssp_workflow",
     "sequence_extensions",
 )
